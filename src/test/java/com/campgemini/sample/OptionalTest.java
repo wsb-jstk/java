@@ -2,7 +2,6 @@ package com.campgemini.sample;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
@@ -14,6 +13,9 @@ import org.junit.jupiter.api.Test;
  * @see Optional
  */
 class OptionalTest {
+
+    private static final String UNKNOWN = "unknown";
+    private static final Person DEFAULT_VALUE = new Person(0, UNKNOWN, UNKNOWN);
 
     private Database database;
 
@@ -64,16 +66,14 @@ class OptionalTest {
         final int id = 2;
         final Optional<Person> person = database.find(id);
         // when
-        assertThrows(RuntimeException.class, () -> getFullName(person));
+        final String fullName = getFullName(person);
         // then
+        assertEquals("unknown unknown", fullName);
     }
 
     private String getFullName(Optional<Person> optionalPerson) {
-        if (optionalPerson.isPresent()) {
-            final Person person = optionalPerson.get();
-            return person.getFirstName() + " " + person.getLastName();
-        }
-        throw new RuntimeException("Empty person");
+        final Person person = optionalPerson.orElse(DEFAULT_VALUE);
+        return person.getFirstName() + " " + person.getLastName();
     }
 
 }
