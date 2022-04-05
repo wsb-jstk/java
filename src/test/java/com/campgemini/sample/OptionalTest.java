@@ -77,6 +77,10 @@ class OptionalTest {
     }
 
     private String getFullName(Optional<Person> optionalPerson, Supplier<Person> defaultPersonSupplier) {
+        // optionalPerson.orElseThrow(RuntimeException::new);
+        // optionalPerson.orElseThrow(() -> new RuntimeException());
+        // Supplier<RuntimeException> exceptionSupplier = () -> new RuntimeException();
+        // optionalPerson.orElseThrow(exceptionSupplier);
         final Person person = optionalPerson.orElseGet(defaultPersonSupplier);
         return person.getFirstName() + " " + person.getLastName();
     }
