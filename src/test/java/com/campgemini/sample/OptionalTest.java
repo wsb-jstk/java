@@ -1,6 +1,7 @@
 package com.campgemini.sample;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
 
@@ -28,18 +29,20 @@ class OptionalTest {
     void findPersonWithId1() {
         // given
         final int id = 1;
-        final Person person = database.find(id);
+        final Optional<Person> person = database.find(id);
         // then
-        assertThat(person).isNotNull();
+        assertTrue(person.isPresent());
+        assertFalse(person.isEmpty());
     }
 
     @Test
     void findPersonWithId2() {
         // given
         final int id = 2;
-        final Person person = database.find(id);
+        final Optional<Person> person = database.find(id);
         // then
-        assertThat(person).isNull();
+        assertFalse(person.isPresent());
+        assertTrue(person.isEmpty());
     }
 
 }
