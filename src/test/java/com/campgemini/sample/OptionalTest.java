@@ -8,10 +8,12 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @see Optional
  */
+@Slf4j
 class OptionalTest {
 
     private static final String UNKNOWN = "unknown";
@@ -55,7 +57,7 @@ class OptionalTest {
         final int id = 1;
         final Optional<Person> person = database.find(id);
         // when
-        final String fullName = getFullName(person);
+        final String fullName = getFullName(person, fetchDefaultPerson());
         // then
         assertEquals("Jan Kowalski", fullName);
     }
@@ -66,14 +68,26 @@ class OptionalTest {
         final int id = 2;
         final Optional<Person> person = database.find(id);
         // when
-        final String fullName = getFullName(person);
+        final String fullName = getFullName(person, fetchDefaultPerson());
         // then
         assertEquals("unknown unknown", fullName);
     }
 
-    private String getFullName(Optional<Person> optionalPerson) {
-        final Person person = optionalPerson.orElse(DEFAULT_VALUE);
+    private String getFullName(Optional<Person> optionalPerson, Person defaultValue) {
+        final Person person = optionalPerson.orElse(defaultValue);
         return person.getFirstName() + " " + person.getLastName();
+    }
+
+    private Person fetchDefaultPerson() {
+        log.debug("Fetching...");
+        try {
+            // mimic long lasting operation
+            Thread.sleep(2_000);
+        } catch (InterruptedException e) {
+            log.error("Error when sleeping", e);
+        }
+        log.debug("Fetched");
+        return DEFAULT_VALUE;
     }
 
 }
