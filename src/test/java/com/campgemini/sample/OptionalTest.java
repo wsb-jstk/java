@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,8 +57,9 @@ class OptionalTest {
         // given
         final int id = 1;
         final Optional<Person> person = database.find(id);
+        final Supplier<Person> defaultPersonSupplier = () -> fetchDefaultPerson();
         // when
-        final String fullName = getFullName(person, fetchDefaultPerson());
+        final String fullName = getFullName(person, defaultPersonSupplier);
         // then
         assertEquals("Jan Kowalski", fullName);
     }
@@ -67,14 +69,15 @@ class OptionalTest {
         // given
         final int id = 2;
         final Optional<Person> person = database.find(id);
+        final Supplier<Person> defaultPersonSupplier = () -> fetchDefaultPerson();
         // when
-        final String fullName = getFullName(person, fetchDefaultPerson());
+        final String fullName = getFullName(person, defaultPersonSupplier);
         // then
         assertEquals("unknown unknown", fullName);
     }
 
-    private String getFullName(Optional<Person> optionalPerson, Person defaultValue) {
-        final Person person = optionalPerson.orElse(defaultValue);
+    private String getFullName(Optional<Person> optionalPerson, Supplier<Person> defaultPersonSupplier) {
+        final Person person = optionalPerson.orElseGet(defaultPersonSupplier);
         return person.getFirstName() + " " + person.getLastName();
     }
 
@@ -88,6 +91,29 @@ class OptionalTest {
         }
         log.debug("Fetched");
         return DEFAULT_VALUE;
+    }
+
+    @FunctionalInterface
+    public interface TestInterface {
+
+        boolean something(); // key method!!!
+
+        default boolean equals(Person object) {
+            return false;
+        }
+
+        default boolean equals1(Person object) {
+            return false;
+        }
+
+        default boolean equals2(Person object) {
+            return false;
+        }
+
+        default boolean equals3(Person object) {
+            return false;
+        }
+
     }
 
 }
