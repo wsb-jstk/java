@@ -5,8 +5,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OptionalTest {
 
     private static final String UNKNOWN = "unknown";
-    private static final Person DEFAULT_VALUE = new Person(0, UNKNOWN, UNKNOWN);
+    private static final Person DEFAULT_VALUE = new Person(0, UNKNOWN, UNKNOWN, 0);
     private Database database;
 
     @BeforeEach
@@ -32,6 +34,7 @@ class OptionalTest {
                            .id(1)
                            .firstName("Jan")
                            .lastName("Kowalski")
+                           .salary(2000)
                            .build());
     }
 
@@ -114,6 +117,73 @@ class OptionalTest {
     }
 
     /**
+     * Get to know {@link Predicate} (ex. {@link Objects#nonNull(Object)})
+     */
+    @Test
+    void shouldUnwrapPerson_whenPersonExists_whenFilteringNonNullValues() {
+        // given
+        final int id = 1;
+        final Optional<Person> person = database.find(id);
+        // when
+        final Person unwrap = person.filter(Objects::nonNull)
+                                    .orElseThrow(NoSuchElementException::new);
+        // then
+        assertNotNull(unwrap);
+    }
+
+    /**
+     * Get to know {@link Predicate} (ex. {@link Objects#nonNull(Object)})
+     */
+    @Test
+    void shouldThrowException_whenPersonDoesNotExist_whenFilteringNonNullValues() {
+        // given
+        final int id = 2;
+        final Optional<Person> person = database.find(id);
+        // when
+        assertThrows(NoSuchElementException.class, () -> person.filter(Objects::nonNull)
+                                                               .orElseThrow(NoSuchElementException::new));
+    }
+
+    /**
+     * Get to know {@link Predicate}
+     */
+    @Test
+    void shouldFilterByTwoPredicates_whenAllPredicatesAreSuccess() {
+        // given
+        final int id = 1;
+        final Optional<Person> person = database.find(id);
+        // when
+        final Predicate<Person> nameStartsWithJPredicate = p -> p.getFirstName()
+                                                                 .startsWith("J");
+        final Predicate<Person> earnsMoreThan1000 = p -> p.getSalary() > 1000;
+        final Person unwrap = person.filter(nameStartsWithJPredicate)
+                                    .filter(earnsMoreThan1000)
+                                    .orElseThrow();
+        // then
+        assertNotNull(unwrap);
+    }
+
+    /**
+     * Get to know {@link Predicate}
+     */
+    @Test
+    void shouldFailThirdPredicate_afterTwoPassWithSuccess() {
+        // given
+        final int id = 1;
+        final Optional<Person> person = database.find(id);
+        // when
+        final Predicate<Person> nameStartsWithJPredicate = p -> p.getFirstName()
+                                                                 .startsWith("J");
+        final Predicate<Person> earnsMoreThan1000 = p -> p.getSalary() > 1_000;
+        final Predicate<Person> earnsMoreThan20000 = p -> p.getSalary() > 20_000;
+        final RuntimeException bum = assertThrows(RuntimeException.class, () -> person.filter(nameStartsWithJPredicate)
+                                                                                      .filter(earnsMoreThan1000)
+                                                                                      .filter(earnsMoreThan20000)
+                                                                                      .orElseThrow(() -> new RuntimeException("moj bum")));
+        assertEquals("moj bum", bum.getMessage());
+    }
+
+    /**
      * This is run in framework's thread. Meaning that it will end up (at some point)
      */
     @Test
@@ -162,7 +232,7 @@ class OptionalTest {
         log.debug("Fetching...");
         try {
             // mimic long lasting operation
-            Thread.sleep(2_000);
+            Thread.sleep(1_000);
         } catch (InterruptedException e) {
             log.error("Error when sleeping", e);
         }

@@ -8,9 +8,8 @@ import lombok.Data;
 class Person {
 
     private final int id;
-
     private final String firstName;
-
     private final String lastName;
+    private final long salary;
 
 }
