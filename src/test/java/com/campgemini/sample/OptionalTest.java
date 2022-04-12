@@ -254,6 +254,36 @@ class OptionalTest {
                                                                .orElseThrow());
     }
 
+    @Test
+    void exampleOfChainingCommandsAndUsingMapper() {
+        // given
+        final int id = 1;
+        final Optional<Person> person = database.find(id);
+        // when
+        PlainPerson plainPerson = person.filter(p -> p.getFirstName()
+                                                      .startsWith("J"))
+                                        .filter(p -> p.getSalary() > 0)
+                                        .map(p -> p)
+                                        .map(Function.identity())
+                                        // .map(PersonToPlainPerson::convert)
+                                        .map(p -> PersonToPlainPerson.convert(p))
+                                        .filter(p -> p.getName()
+                                                      .startsWith("Jan"))
+                                        .orElseThrow();
+        // then
+        assertEquals("Jan Kowalski", plainPerson.getName());
+    }
+
+    private static class PersonToPlainPerson {
+
+        public static PlainPerson convert(Person person) {
+            return PlainPerson.builder()
+                              .name(person.getFirstName() + " " + person.getLastName())
+                              .build();
+        }
+
+    }
+
     /**
      * This is run in framework's thread. Meaning that it will end up (at some point)
      */
