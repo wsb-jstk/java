@@ -1,15 +1,19 @@
 package com.campgemini.sample;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.Optional;
-import java.util.function.Supplier;
-
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import lombok.extern.slf4j.Slf4j;
+
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @see Optional
@@ -19,7 +23,6 @@ class OptionalTest {
 
     private static final String UNKNOWN = "unknown";
     private static final Person DEFAULT_VALUE = new Person(0, UNKNOWN, UNKNOWN);
-
     private Database database;
 
     @BeforeEach
@@ -52,6 +55,9 @@ class OptionalTest {
         assertTrue(person.isEmpty());
     }
 
+    /**
+     * Get to know {@link Supplier}
+     */
     @Test
     void shouldGetFullName_forPersonWithId1() {
         // given
@@ -64,6 +70,9 @@ class OptionalTest {
         assertEquals("Jan Kowalski", fullName);
     }
 
+    /**
+     * Get to know {@link Supplier}
+     */
     @Test
     void shouldThrowException_whenGettingFullName_forPersonWithId2() {
         // given
@@ -74,6 +83,70 @@ class OptionalTest {
         final String fullName = getFullName(person, defaultPersonSupplier);
         // then
         assertEquals("unknown unknown", fullName);
+    }
+
+    /**
+     * Get to know {@link Consumer} and {@link Runnable}
+     */
+    @Test
+    void showPassWhenSearchingForExistingPerson() {
+        // given
+        final int id = 1;
+        final Optional<Person> person = database.find(id);
+        final Consumer<Person> personConsumer = p -> assertNotNull(p);
+        final Runnable runnable = () -> {throw new NoSuchElementException();};
+        // when
+        person.ifPresentOrElse(personConsumer, runnable);
+    }
+
+    /**
+     * Get to know {@link Consumer} and {@link Runnable}
+     */
+    @Test
+    void showPassWhenSearchingForNotExistingPerson() {
+        // given
+        final int id = 2;
+        final Optional<Person> person = database.find(id);
+        final Consumer<Person> personConsumer = p -> assertNotNull(p);
+        final Runnable runnable = () -> {throw new NoSuchElementException();};
+        // when
+        assertThrows(NoSuchElementException.class, () -> person.ifPresentOrElse(personConsumer, runnable));
+    }
+
+    /**
+     * This is run in framework's thread. Meaning that it will end up (at some point)
+     */
+    @Test
+    void runThread() {
+        final Runnable runnable = () -> {
+            while (true) {
+                System.out.println(".");
+            }
+        };
+        final Thread thread = new Thread(runnable);
+        thread.start();
+    }
+
+    /**
+     * Set as private, so IDEA won't propose to run it as a program.
+     * If You want to test it - change visibility to public
+     */
+    private static void main(String[] args) {
+        final Runnable runnable = () -> {
+            for (; ; ) {
+                // for(int i = 0; i < 5; i++) {
+                System.out.println(".");
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    log.error("Error while sleeping", e);
+                }
+            }
+        };
+        final Thread thread = new Thread(runnable);
+        log.debug("This thread is daemon? {}", thread.isDaemon());
+        // thread.setDaemon(true);
+        thread.start();
     }
 
     private String getFullName(Optional<Person> optionalPerson, Supplier<Person> defaultPersonSupplier) {
