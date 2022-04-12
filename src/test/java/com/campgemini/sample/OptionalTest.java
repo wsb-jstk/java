@@ -8,6 +8,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -25,6 +26,7 @@ class OptionalTest {
 
     private static final String UNKNOWN = "unknown";
     private static final Person DEFAULT_VALUE = new Person(0, UNKNOWN, UNKNOWN, 0);
+    private static final int ID_OF_NOT_EXISTING_PERSON = 10;
     private Database database;
 
     @BeforeEach
@@ -35,6 +37,12 @@ class OptionalTest {
                            .firstName("Jan")
                            .lastName("Kowalski")
                            .salary(2000)
+                           .build());
+        database.add(Person.builder()
+                           .id(2)
+                           .firstName("Karolina")
+                           .lastName("Piekna")
+                           .salary(500)
                            .build());
     }
 
@@ -51,8 +59,7 @@ class OptionalTest {
     @Test
     void findPersonWithId2() {
         // given
-        final int id = 2;
-        final Optional<Person> person = database.find(id);
+        final Optional<Person> person = database.find(ID_OF_NOT_EXISTING_PERSON);
         // then
         assertFalse(person.isPresent());
         assertTrue(person.isEmpty());
@@ -79,8 +86,7 @@ class OptionalTest {
     @Test
     void shouldThrowException_whenGettingFullName_forPersonWithId2() {
         // given
-        final int id = 2;
-        final Optional<Person> person = database.find(id);
+        final Optional<Person> person = database.find(ID_OF_NOT_EXISTING_PERSON);
         final Supplier<Person> defaultPersonSupplier = () -> fetchDefaultPerson();
         // when
         final String fullName = getFullName(person, defaultPersonSupplier);
@@ -96,10 +102,11 @@ class OptionalTest {
         // given
         final int id = 1;
         final Optional<Person> person = database.find(id);
-        final Consumer<Person> personConsumer = p -> assertNotNull(p);
+        final Consumer<Person> notNullConsumer = p -> assertNotNull(p);
+        final Consumer<Person> notNullAndLogConsumer = notNullConsumer.andThen(p -> log.debug("I've person: {}", p));
         final Runnable runnable = () -> {throw new NoSuchElementException();};
         // when
-        person.ifPresentOrElse(personConsumer, runnable);
+        person.ifPresentOrElse(notNullAndLogConsumer, runnable);
     }
 
     /**
@@ -108,8 +115,7 @@ class OptionalTest {
     @Test
     void showPassWhenSearchingForNotExistingPerson() {
         // given
-        final int id = 2;
-        final Optional<Person> person = database.find(id);
+        final Optional<Person> person = database.find(ID_OF_NOT_EXISTING_PERSON);
         final Consumer<Person> personConsumer = p -> assertNotNull(p);
         final Runnable runnable = () -> {throw new NoSuchElementException();};
         // when
@@ -137,8 +143,7 @@ class OptionalTest {
     @Test
     void shouldThrowException_whenPersonDoesNotExist_whenFilteringNonNullValues() {
         // given
-        final int id = 2;
-        final Optional<Person> person = database.find(id);
+        final Optional<Person> person = database.find(ID_OF_NOT_EXISTING_PERSON);
         // when
         assertThrows(NoSuchElementException.class, () -> person.filter(Objects::nonNull)
                                                                .orElseThrow(NoSuchElementException::new));
@@ -163,6 +168,23 @@ class OptionalTest {
         assertNotNull(unwrap);
     }
 
+    @Test
+    void shouldFilterByTwoPredicates_whenAllPredicatesAreSuccess_negate() {
+        // given
+        final int id = 2;
+        final Optional<Person> person = database.find(id);
+        // when
+        final Predicate<Person> nameStartsWithJPredicate = p -> p.getFirstName()
+                                                                 .startsWith("J");
+        final Predicate<Person> earnsMoreThan1000 = p -> p.getSalary() > 1000;
+        final Person unwrap = person.filter(nameStartsWithJPredicate.negate())
+                                    .filter(earnsMoreThan1000.negate())
+                                    .orElseThrow();
+        // then
+        log.debug("I've: {}", unwrap);
+        assertNotNull(unwrap);
+    }
+
     /**
      * Get to know {@link Predicate}
      */
@@ -181,6 +203,55 @@ class OptionalTest {
                                                                                       .filter(earnsMoreThan20000)
                                                                                       .orElseThrow(() -> new RuntimeException("moj bum")));
         assertEquals("moj bum", bum.getMessage());
+    }
+
+    /**
+     * Example for {@link Predicate#and(Predicate)}
+     */
+    @Test
+    void shouldFailThirdPredicate_afterTwoPassWithSuccess2() {
+        // given
+        final int id = 1;
+        final Optional<Person> person = database.find(id);
+        // when
+        final Predicate<Person> nameStartsWithJPredicate = p -> p.getFirstName()
+                                                                 .startsWith("J");
+        final Predicate<Person> earnsMoreThan1000 = p -> p.getSalary() > 1_000;
+        final Predicate<Person> earnsMoreThan20000 = p -> p.getSalary() > 20_000;
+        final RuntimeException bum = assertThrows(RuntimeException.class, () ->//
+                person.filter(nameStartsWithJPredicate.and(earnsMoreThan1000)
+                                                      .and(earnsMoreThan20000))
+                      .orElseThrow(() -> new RuntimeException("moj bum")));
+        assertEquals("moj bum", bum.getMessage());
+    }
+
+    /**
+     * Get to know {@link Function}
+     */
+    @Test
+    void shouldMapPersonToLong_whenSearchingForExistingPerson() {
+        // given
+        final int id = 1;
+        final Optional<Person> person = database.find(id);
+        // when
+        long salary = person.map(Function.identity())
+                            .map(p -> p.getSalary())
+                            .map(Function.identity())
+                            .orElseThrow();
+        // then
+        assertTrue(salary > 1000);
+    }
+
+    /**
+     * Get to know {@link Function}
+     */
+    @Test
+    void shouldThrowException_whenSearchingForNotExistingPerson() {
+        // given
+        final Optional<Person> person = database.find(ID_OF_NOT_EXISTING_PERSON);
+        // when
+        assertThrows(NoSuchElementException.class, () -> person.map(p -> p.getSalary())
+                                                               .orElseThrow());
     }
 
     /**
